@@ -18,15 +18,14 @@ package org.fastj.fit.jenkins;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.fastj.fit.intf.PostProc;
 import org.fastj.fit.intf.TCNode;
 import org.fastj.fit.intf.TProject;
+import org.fastj.fit.intf.TResult;
 import org.fastj.fit.intf.TSuite;
 import org.fastj.fit.log.LogUtil;
 
@@ -43,7 +42,6 @@ public class JenkinsPostProc implements PostProc {
 	long end;
 	boolean filterSkipped = false;
 	
-	List<TCNode> tcDList = new ArrayList<>();
 	Map<String, XMLJUnitResult> emap = new HashMap<>();
 	TSNode totalCnt = new TSNode();
 	
@@ -109,6 +107,22 @@ public class JenkinsPostProc implements PostProc {
 	
 	@Override
 	public void finish(TCNode tcn) {
+		
+		if (tcn.getName().indexOf("${") > -1 || tcn.getTid().indexOf("${") > -1)
+		{
+			for (TResult tr : tcn.getResults())
+			{
+				TCRNode tcr = new TCRNode(tcn, tr);
+				finish0(tcr);
+			}
+		}else
+		{
+			finish0(tcn);
+		}
+	}
+	
+	private void finish0(TCNode tcn)
+	{
 		if (tcn.getResult() == TCNode.SKIPPED)
 		{
 			totalCnt.setSkipCnt(totalCnt.skipCount() + 1);
@@ -118,7 +132,6 @@ public class JenkinsPostProc implements PostProc {
 			return;
 		}
 		
-		tcDList.add(tcn);
 		//ExtPoint: Set Result to 3rd Systems
 		//ExtPoint: Write TestCase Log to 3rd Systems
 		

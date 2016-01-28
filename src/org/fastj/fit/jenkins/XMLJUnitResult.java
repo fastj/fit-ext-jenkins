@@ -105,7 +105,9 @@ public class XMLJUnitResult implements Constants{
 	public void appendNode(TCNode test) {
 		Element currentTest = doc.createElement(TESTCASE);
 		String n = test.getName();
+		String id = test.getTid();
 		currentTest.setAttribute(ATTR_NAME, n == null ? UNKNOWN : n);
+		currentTest.setAttribute(ATTR_ID, id == null ? UNKNOWN : id);
 		currentTest.setAttribute(ATTR_CLASSNAME, test.getSuite().getName());
 		rootElement.appendChild(currentTest);
 		formatOutput(currentTest, test.getResult() == TCNode.PASS ? SYSTEM_OUT : SYSTEM_ERR, test.getLog());
