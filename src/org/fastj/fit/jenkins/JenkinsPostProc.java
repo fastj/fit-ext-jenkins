@@ -40,7 +40,7 @@ public class JenkinsPostProc implements PostProc {
 	TProject tproj;
 	long start;
 	long end;
-	boolean filterSkipped = false;
+	boolean filterSkipped = true;
 	
 	Map<String, XMLJUnitResult> emap = new HashMap<>();
 	TSNode totalCnt = new TSNode();
@@ -90,12 +90,12 @@ public class JenkinsPostProc implements PostProc {
 	public void start(TProject tproj) {
 		this.tproj = tproj;
 		start = System.currentTimeMillis();
-		filterSkipped = tproj.getSysVars().gcontains("ignoreSkipped");
+		filterSkipped = Boolean.valueOf(tproj.getSysVars().getPara("ignoreSkipped", "true"));
 		System.out.println("===> Start test at " + new Date());
 	}
 
 	@Override
-	public void start(TCNode tcn) {
+	public synchronized void start(TCNode tcn) {
 		String tsname = tcn.getSuite().getName();
 		synchronized (emap) {
 			if (!emap.containsKey(tsname)) {
@@ -121,7 +121,7 @@ public class JenkinsPostProc implements PostProc {
 		}
 	}
 	
-	private void finish0(TCNode tcn)
+	private synchronized void finish0(TCNode tcn)
 	{
 		if (tcn.getResult() == TCNode.SKIPPED)
 		{
@@ -142,7 +142,7 @@ public class JenkinsPostProc implements PostProc {
 		tsn.setEnd(tcn.getEndTime());
 		tsn.setRunCnt(tsn.runCount() + 1);
 		
-		if (tcn.getResult() != TCNode.PASS)
+		if (tcn.getResult() != TCNode.PASS && tcn.getResult() != TCNode.SKIPPED)
 		{
 			tsn.setFailureCnt(tsn.failureCount() + 1);
 		}
