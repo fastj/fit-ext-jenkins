@@ -123,6 +123,8 @@ public class JenkinsPostProc implements PostProc {
 	
 	private synchronized void finish0(TCNode tcn)
 	{
+		if (tcn.getResult() == TCNode.REPLACED) return;
+		
 		if (tcn.getResult() == TCNode.SKIPPED)
 		{
 			totalCnt.setSkipCnt(totalCnt.skipCount() + 1);
