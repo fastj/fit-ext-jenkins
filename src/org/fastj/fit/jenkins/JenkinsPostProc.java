@@ -55,12 +55,23 @@ public class JenkinsPostProc implements PostProc {
 			xjr.count(totalCnt);
 		}
 		
+		LogUtil.trace("<=== End test at " + new Date());
+		
+		LogUtil.trace("------------------------Report-------------------------\r\n");
+		
+		LogUtil.trace("Total run: " + totalCnt.runCount());
+		LogUtil.trace("     PASS: " + (totalCnt.runCount() - totalCnt.failureCount()));
+		LogUtil.trace("     FAIL: " + totalCnt.failureCount());
+		LogUtil.trace("     SKIP: " + totalCnt.skipCount());
+		
+		LogUtil.trace("\r\nAll test takes: " + (end - start)/1000. + " sec.");
+		
 		FileOutputStream glog = null;
 		try {
 			glog = new FileOutputStream(tproj.getLogFile("fit.log"));
 			glog.write(LogUtil.getLog());
 		} catch (Throwable e) {
-			e.printStackTrace();
+			System.err.println("Write fit log fail : " + e.getMessage());
 		}
 		finally
 		{
@@ -69,20 +80,10 @@ public class JenkinsPostProc implements PostProc {
 				try {
 					glog.close();
 				} catch (IOException e) {
+					System.err.println("Close fit.log fail : " + e.getMessage());
 				}
 			}
 		}
-		
-		System.out.println("<=== End test at " + new Date());
-		
-		System.out.println("------------------------Report-------------------------\r\n");
-		
-		System.out.println("Total run: " + totalCnt.runCount());
-		System.out.println("     PASS: " + (totalCnt.runCount() - totalCnt.failureCount()));
-		System.out.println("     FAIL: " + totalCnt.failureCount());
-		System.out.println("     SKIP: " + totalCnt.skipCount());
-		
-		System.out.println("\r\nAll test takes: " + (end - start)/1000. + " sec.");
 		
 	}
 
@@ -108,14 +109,16 @@ public class JenkinsPostProc implements PostProc {
 	@Override
 	public void finish(TCNode tcn) {
 		
-		if (tcn.getName().indexOf("${") > -1 || tcn.getTid().indexOf("${") > -1)
+		if ((tcn.getName() != null && tcn.getName().indexOf("${") > -1) || 
+				(tcn.getTid() != null && tcn.getTid().indexOf("${") > -1) )
 		{
 			for (TResult tr : tcn.getResults())
 			{
 				TCRNode tcr = new TCRNode(tcn, tr);
 				finish0(tcr);
 			}
-		}else
+		}
+		else
 		{
 			finish0(tcn);
 		}

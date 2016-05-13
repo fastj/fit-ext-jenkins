@@ -18,6 +18,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.fastj.fit.intf.TCNode;
 import org.fastj.fit.intf.TProject;
 import org.fastj.fit.intf.TSuite;
+import org.fastj.fit.log.LogUtil;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -50,7 +51,7 @@ public class XMLJUnitResult implements Constants{
         	tsRlt = tproj.getLogFile(suite.getName().replace('.','_') + "_rlt.xml");
 			out = new FileOutputStream(tsRlt);
 		} catch (Throwable e) {
-			e.printStackTrace();
+			LogUtil.error("Create TSLog fail: e={}", e.getMessage());
 		}
     }
 
@@ -83,18 +84,19 @@ public class XMLJUnitResult implements Constants{
                 wri.write("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n");
                 (new DOMElementWriter()).write(rootElement, wri, 0, "  ");
             } catch (IOException exc) {
-                exc.printStackTrace();
+            	LogUtil.error("Write fit xml result fail: e={}", exc.getMessage());
             } finally {
                 if (wri != null) {
                     try {
                         wri.flush();
                     } catch (IOException ex) {
-                        // ignore
+                    	LogUtil.error("Close writer fail: e={}", ex.getMessage());
                     }
                     
 					try {
 						out.close();
 					} catch (IOException e) {
+						LogUtil.error("Close writer fail: e={}", e.getMessage());
 					}
                     
                 }
@@ -104,11 +106,17 @@ public class XMLJUnitResult implements Constants{
 
 	public void appendNode(TCNode test) {
 		Element currentTest = doc.createElement(TESTCASE);
-		String n = test.getName();
-		String id = test.getTid();
-		currentTest.setAttribute(ATTR_NAME, n == null ? UNKNOWN : n);
-		currentTest.setAttribute(ATTR_ID, id == null ? UNKNOWN : id);
-		currentTest.setAttribute(ATTR_CLASSNAME, test.getSuite().getName());
+		String n = test.getName() == null ? UNKNOWN : test.getName();
+		String id = test.getTid() == null ? UNKNOWN : test.getTid();
+		currentTest.setAttribute(ATTR_NAME, n);
+		currentTest.setAttribute(ATTR_ID, id);
+		
+		String tsn = test.getSuite().getName();
+		tsn = tsn == null ? "envSetup" : tsn.contains("__L") ? tsn.substring(0, tsn.indexOf("__L")) : tsn;
+		tsn = tsn.replaceAll("\\.", "_");
+		currentTest.setAttribute(ATTR_CLASSNAME, tsn + "." + id);
+		currentTest.setAttribute(ATTR_RESULT, String.valueOf(test.getResult()));
+		
 		rootElement.appendChild(currentTest);
 		formatOutput(currentTest, test.getResult() == TCNode.PASS ? SYSTEM_OUT : SYSTEM_ERR, test.getLog());
 
@@ -160,6 +168,7 @@ interface Constants {
     String ATTR_VALUE = "value";
     String ATTR_CLASSNAME = "classname";
     String ATTR_ID = "id";
+    String ATTR_RESULT = "result";
     String TIMESTAMP = "timestamp";
     String HOSTNAME = "hostname";
 }
