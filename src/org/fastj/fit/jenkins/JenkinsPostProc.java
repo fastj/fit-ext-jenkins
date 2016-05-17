@@ -107,7 +107,7 @@ public class JenkinsPostProc implements PostProc {
 	}
 	
 	@Override
-	public void finish(TCNode tcn) {
+	public synchronized void finish(TCNode tcn) {
 		
 		if ((tcn.getName() != null && tcn.getName().indexOf("${") > -1) || 
 				(tcn.getTid() != null && tcn.getTid().indexOf("${") > -1) )
