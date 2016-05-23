@@ -49,12 +49,12 @@ public class JenkinsPostProc implements PostProc {
 	public void end() {
 		end = System.currentTimeMillis();
 		
-		for (XMLJUnitResult xjr : emap.values())
-		{
-			xjr.endTestSuite();
-			xjr.count(totalCnt);
+		synchronized (emap) {
+			for (XMLJUnitResult xjr : emap.values()) {
+				xjr.endTestSuite();
+				xjr.count(totalCnt);
+			}
 		}
-		
 		LogUtil.trace("<=== End test at " + new Date());
 		
 		LogUtil.trace("------------------------Report-------------------------\r\n");
@@ -92,11 +92,11 @@ public class JenkinsPostProc implements PostProc {
 		this.tproj = tproj;
 		start = System.currentTimeMillis();
 		filterSkipped = Boolean.valueOf(tproj.getSysVars().getPara("ignoreSkipped", "true"));
-		System.out.println("===> Start test at " + new Date());
+		LogUtil.trace("===> Start test at " + new Date());
 	}
 
 	@Override
-	public synchronized void start(TCNode tcn) {
+	public void start(TCNode tcn) {
 		String tsname = tcn.getSuite().getName();
 		synchronized (emap) {
 			if (!emap.containsKey(tsname)) {
@@ -107,7 +107,7 @@ public class JenkinsPostProc implements PostProc {
 	}
 	
 	@Override
-	public synchronized void finish(TCNode tcn) {
+	public void finish(TCNode tcn) {
 		
 		if ((tcn.getName() != null && tcn.getName().indexOf("${") > -1) || 
 				(tcn.getTid() != null && tcn.getTid().indexOf("${") > -1) )
@@ -124,7 +124,7 @@ public class JenkinsPostProc implements PostProc {
 		}
 	}
 	
-	private synchronized void finish0(TCNode tcn)
+	private void finish0(TCNode tcn)
 	{
 		if (tcn.getResult() == TCNode.REPLACED) return;
 		
@@ -141,15 +141,22 @@ public class JenkinsPostProc implements PostProc {
 		//ExtPoint: Write TestCase Log to 3rd Systems
 		
 		String tsname = tcn.getSuite().getName();
-		emap.get(tsname).appendNode(tcn);
+		XMLJUnitResult xjr = null;
+		synchronized (emap) {
+			xjr = emap.get(tsname);
+		}
+		if (xjr == null) {
+			return ;
+		}
+		xjr.appendNode(tcn);
+		TSNode tsn = xjr.node;
 		
-		TSNode tsn = emap.get(tsname).node;
-		tsn.setEnd(tcn.getEndTime());
-		tsn.setRunCnt(tsn.runCount() + 1);
-		
-		if (tcn.getResult() != TCNode.PASS && tcn.getResult() != TCNode.SKIPPED)
-		{
-			tsn.setFailureCnt(tsn.failureCount() + 1);
+		synchronized (tsn) {
+			tsn.setEnd(tcn.getEndTime());
+			tsn.setRunCnt(tsn.runCount() + 1);
+			if (tcn.getResult() != TCNode.PASS && tcn.getResult() != TCNode.SKIPPED) {
+				tsn.setFailureCnt(tsn.failureCount() + 1);
+			}
 		}
 	}
 
